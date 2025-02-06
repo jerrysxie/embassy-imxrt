@@ -1,5 +1,6 @@
 //! Timer module for the NXP RT6xx family of microcontrollers
 use core::future::poll_fn;
+use core::marker::PhantomData;
 use core::task::Poll;
 
 use embassy_hal_internal::interrupt::InterruptExt;
@@ -11,7 +12,7 @@ use crate::iopctl::{DriveMode, DriveStrength, Inverter, IopctlPin as Pin, Pull, 
 use crate::pac::clkctl1::ct32bitfclksel::Sel;
 use crate::pac::Clkctl1;
 use crate::pwm::{CentiPercent, Hertz, MicroSeconds};
-use crate::{interrupt, peripherals, Peripheral, PeripheralRef};
+use crate::{interrupt, peripherals, Peripheral};
 
 const COUNT_CHANNEL: usize = 20;
 const CAPTURE_CHANNEL: usize = 20;
@@ -883,23 +884,23 @@ impl<M: Mode> Drop for CaptureTimer<M> {
 }
 
 /// Basic PWM Object, Consumes `CTimer` peripheral hardware instances for match channel and PWM length channel on construction
-pub struct CTimerPwm<'p, T: Instance, U: Instance> {
-    _p: PeripheralRef<'p, T>,
-    _len: &'p CTimerPwmLengthChannel<'p, U>,
+pub struct CTimerPwm<'p> {
+    _lifetime: PhantomData<&'p ()>,
+    _len: &'p CTimerPwmLengthChannel<'p>,
     period: MicroSeconds,
     count_max: u32,
     info: Info,
 }
 
 /// Basic PWM Length channel Object, Consumes `CTimer` peripheral hardware instances for match channel and PWM length channel on construction
-pub struct CTimerPwmLengthChannel<'p, U: Instance> {
-    _p: PeripheralRef<'p, U>,
+pub struct CTimerPwmLengthChannel<'p> {
+    _lifetime: PhantomData<&'p ()>,
     period: MicroSeconds,
     count_max: u32,
     _info: Info,
 }
 
-impl<T: Instance, U: Instance> embedded_hal_02::Pwm for CTimerPwm<'_, T, U> {
+impl embedded_hal_02::Pwm for CTimerPwm<'_> {
     type Channel = TimerChannelNum;
     type Time = MicroSeconds;
     type Duty = CentiPercent;
@@ -954,7 +955,7 @@ impl<T: Instance, U: Instance> embedded_hal_02::Pwm for CTimerPwm<'_, T, U> {
     where
         P: Into<Self::Time>,
     {
-        let clock_rate = Hertz(T::info().pwm_get_clock_freq());
+        let clock_rate = Hertz(self.info.pwm_get_clock_freq());
 
         let requested_pwm_rate: Hertz = period.into().into();
 
@@ -969,7 +970,7 @@ impl<T: Instance, U: Instance> embedded_hal_02::Pwm for CTimerPwm<'_, T, U> {
         self.count_max = clock_rate.0 / requested_pwm_rate.0;
 
         // Set period through match register
-        U::info().pwm_configure(self.count_max);
+        self.info.pwm_configure(self.count_max);
 
         // update duty cycle match registers according to new scale factor
         for i in 0..TIMER_CHANNELS_ARR.len() {
@@ -978,24 +979,24 @@ impl<T: Instance, U: Instance> embedded_hal_02::Pwm for CTimerPwm<'_, T, U> {
     }
 }
 
-impl<'p, T: Instance, U: Instance> CTimerPwm<'p, T, U> {
+impl<'p> CTimerPwm<'p> {
     /// Take the `CTimer` instance supplied and use it as a simple PWM driver. Function returns constructed Pwm instance.
-    pub fn new(
-        match_channel: impl Peripheral<P = T> + 'p,
-        length_channel: &'p CTimerPwmLengthChannel<U>,
+    pub fn new<T: Instance>(
+        _match_channel: impl Peripheral<P = T> + 'p,
+        length_channel: &'p CTimerPwmLengthChannel,
         matchoutput_pin: impl CTimerMatchOutput,
     ) -> Self {
         // Assert if length channel and PWM channel does not belong to same CTimer
-        assert!(U::info().module == T::info().module);
+        //assert!(m::info().module == length_channel.info.module);
 
         // Set PWM period
-        U::info().pwm_configure(length_channel.count_max);
+        T::info().pwm_configure(length_channel.count_max);
 
         // Configure match output pin
         matchoutput_pin.configure_for_ctimer_match_output();
 
         Self {
-            _p: match_channel.into_ref(),
+            _lifetime: PhantomData,
             _len: length_channel,
             period: length_channel.period,
             count_max: length_channel.count_max,
@@ -1004,10 +1005,11 @@ impl<'p, T: Instance, U: Instance> CTimerPwm<'p, T, U> {
     }
 }
 
-impl<'p, T: Instance> CTimerPwmLengthChannel<'p, T> {
+impl<'p> CTimerPwmLengthChannel<'p> {
     /// Take the `CTimer` instance supplied and use it as a simple PWM driver. Function returns constructed Pwm instance.
-    pub fn new(length_channel: impl Peripheral<P = T> + 'p, period: MicroSeconds) -> Self {
-        let clock_rate = Hertz(T::info().pwm_get_clock_freq());
+    pub fn new<T: Instance>(_length_channel: impl Peripheral<P = T> + 'p, period: MicroSeconds) -> Self {
+        let info = T::info();
+        let clock_rate = Hertz(info.pwm_get_clock_freq());
 
         let requested_pwm_rate: Hertz = period.into();
 
@@ -1020,10 +1022,10 @@ impl<'p, T: Instance> CTimerPwmLengthChannel<'p, T> {
         let factor = clock_rate.0 / requested_pwm_rate.0;
 
         Self {
-            _p: length_channel.into_ref(),
+            _lifetime: PhantomData,
             period,
             count_max: factor,
-            _info: T::info(),
+            _info: info,
         }
     }
 }
