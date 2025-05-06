@@ -1,6 +1,5 @@
 # This workflow runs whenever a PR is opened or updated, or a commit is pushed to main. It runs
 # several checks:
-# - commit_list: produces a list of commits to be checked
 # - fmt: checks that the code is formatted according to rustfmt
 # - clippy: checks that the code does not contain any clippy warnings
 # - doc: checks that the code can be documented without errors
@@ -31,7 +30,6 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     name: nightly / fmt
-    needs: commit_list
 
     strategy:
       fail-fast: false
@@ -89,16 +87,10 @@ jobs:
   # semver:
   #   runs-on: ubuntu-latest
   #   name: semver
-  #   needs: commit_list
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       commit: ${{ fromJSON(needs.commit_list.outputs.commits) }}
   #   steps:
   #     - uses: actions/checkout@v4
   #       with:
   #         submodules: true
-  #         ref: ${{ matrix.commit }}
   #     - name: Install stable
   #       uses: dtolnay/rust-toolchain@stable
   #       with:
@@ -244,7 +236,7 @@ jobs:
                        #
                        # embassy upstream switched to rust 1.85
 
-    name: ubuntu / ${{ matrix.msrv }} (${{ matrix.commit }})
+    name: ubuntu / ${{ matrix.msrv }}
     steps:
       - uses: actions/checkout@v4
         with:
