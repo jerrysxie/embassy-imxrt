@@ -318,9 +318,9 @@ impl_sda!(PIO1_5, F1, FLEXCOMM5);
 impl_sda!(PIO1_6, F1, FLEXCOMM5);
 impl_scl!(PIO1_7, F1, FLEXCOMM5);
 
-impl_scl!(PIO3_16, F4, FLEXCOMM5);
-impl_sda!(PIO3_17, F4, FLEXCOMM5);
-impl_sda!(PIO3_18, F4, FLEXCOMM5);
+impl_scl!(PIO3_16, F5, FLEXCOMM5);
+impl_sda!(PIO3_17, F5, FLEXCOMM5);
+impl_sda!(PIO3_18, F5, FLEXCOMM5);
 impl_scl!(PIO3_22, F5, FLEXCOMM5);
 
 // Flexcomm6 GPIOs -

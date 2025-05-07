@@ -243,6 +243,7 @@ impl Driver for TimerDriver {
 
 /// Represents a date and time.
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(PartialEq, Debug)]
 pub struct Datetime {
     /// The year component of the date.
     pub year: u16,
@@ -366,31 +367,26 @@ impl<'r> RtcDatetime<'r> {
     /// Convert a datetime to seconds since 1970-01-01 00:00:00.
     pub fn convert_datetime_to_secs(&self, datetime: &Datetime) -> u32 {
         let mut days: u32 = 0;
-        let mut year: u16 = datetime.year;
-        let mut month: u8 = datetime.month;
-        let day: u32 = datetime.day as u32;
 
-        // Calculate days from 1970 to the current year
-        while year > 1970 {
+        // Calculate days from full years from 1970 to the current year
+        for year in 1970..datetime.year {
             days += 365;
             if self.is_leap_year(year) {
                 days += 1;
             }
-            year -= 1;
         }
 
         // Calculate days from January to the current month
-        let days_in_month = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30];
-        while month > 1 {
-            days += days_in_month[month as usize - 1];
+        const DAYS_IN_MONTH: [u32; 12] = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30];
+        for month in 1..datetime.month {
+            days += DAYS_IN_MONTH[month as usize];
             if month == 2 && self.is_leap_year(datetime.year) {
                 days += 1;
             }
-            month -= 1;
         }
 
         // Calculate days from the first day of the month to the current day
-        days += day - 1;
+        days += datetime.day as u32 - 1;
 
         // Calculate seconds from the first day of the month to the current day
         let secs = datetime.second as u32 + datetime.minute as u32 * 60 + datetime.hour as u32 * 3600;
