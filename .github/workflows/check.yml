@@ -181,7 +181,7 @@ jobs:
         with:
           submodules: true
 
-      - name: Install stab
+      - name: Install stable
         uses: dtolnay/rust-toolchain@stable
 
       - name: cargo install cargo-hack
