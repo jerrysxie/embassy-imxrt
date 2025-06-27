@@ -78,7 +78,7 @@ mimxrt685s = ["mimxrt685s-pac", "_mimxrt685s"]
 mimxrt633s = ["mimxrt633s-pac", "_mimxrt633s"]
 
 [dependencies]
-storage_bus = { git = "https://github.com/OpenDevicePartnership/embedded-services", version = "0.1.1" }
+storage_bus = { git = "https://github.com/OpenDevicePartnership/embedded-mcu" }
 embassy-sync = { git = "https://github.com/embassy-rs/embassy" }
 embassy-time-driver = { git = "https://github.com/embassy-rs/embassy", optional = true }
 embassy-time-queue-utils = { git = "https://github.com/embassy-rs/embassy", optional = true }
