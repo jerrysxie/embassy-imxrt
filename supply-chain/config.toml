@@ -43,12 +43,6 @@ audit-as-crates-io = false
 [policy.embassy-time-queue-utils]
 audit-as-crates-io = false
 
-[policy.embedded-batteries]
-audit-as-crates-io = false
-
-[policy.embedded-batteries-async]
-audit-as-crates-io = false
-
 [[exemptions.atomic-polyfill]]
 version = "1.0.3"
 criteria = "safe-to-deploy"
