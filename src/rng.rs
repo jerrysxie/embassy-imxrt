@@ -127,6 +127,18 @@ impl<'d> Rng<'d> {
         })
         .await;
 
+        // Exit early if we got an error
+        if res.is_err() {
+            // Clear HW error
+            self.info.regs.mctl().modify(|_, w| w.err().clear_bit_by_one());
+
+            // Reading the last element restarts the generation
+            if let Some(ent) = self.info.regs.ent_iter().last() {
+                ent.read().bits();
+            }
+            return res;
+        }
+
         let bits = self.info.regs.mctl().read();
 
         if bits.ent_val().bit_is_set() {
@@ -191,7 +203,51 @@ impl<'d> Rng<'d> {
         self.mask_interrupts();
 
         // Switch TRNG to programming mode
-        self.info.regs.mctl().modify(|_, w| w.prgm().set_bit());
+        self.info.regs.mctl().write(|w| w.prgm().set_bit().trng_acc().set_bit());
+
+        // Disable HW entropy check due to HW issue when main clock is running at a high rate
+        self.info.regs.frqmin().write(|w| unsafe { w.frq_min().bits(0x0) });
+        self.info
+            .regs
+            .frqmax()
+            .write(|w| unsafe { w.frq_max().bits(0x3F_FFFF) });
+        self.info
+            .regs
+            .pkrmax()
+            .write(|w| unsafe { w.pkr_max().bits(0x0000_FFFE) });
+        self.info
+            .regs
+            .pkrrng()
+            .write(|w| unsafe { w.pkr_rng().bits(0x0000_FFFF) });
+        self.info
+            .regs
+            .scml()
+            .write(|w| unsafe { w.mono_max().bits(0xFFFE).mono_rng().bits(0xFFFF) });
+        self.info
+            .regs
+            .scr1l()
+            .write(|w| unsafe { w.run1_max().bits(0x7FFE).run1_rng().bits(0x7FFF) });
+        self.info
+            .regs
+            .scr2l()
+            .write(|w| unsafe { w.run2_max().bits(0x3FFE).run2_rng().bits(0x3FFF) });
+        self.info
+            .regs
+            .scr3l()
+            .write(|w| unsafe { w.run3_max().bits(0x1FFE).run3_rng().bits(0x1FFF) });
+        self.info
+            .regs
+            .scr4l()
+            .write(|w| unsafe { w.run4_max().bits(0x0FFE).run4_rng().bits(0x0FFF) });
+        self.info
+            .regs
+            .scr5l()
+            .write(|w| unsafe { w.run5_max().bits(0x07FE).run5_rng().bits(0x07FF) });
+        self.info
+            .regs
+            .scr6pl()
+            .write(|w| unsafe { w.run6p_max().bits(0x07FE).run6p_rng().bits(0x07FF) });
+        self.info.regs.scmisc().write(|w| unsafe { w.lrun_max().bits(0xFF) });
 
         self.enable_interrupts();
 
