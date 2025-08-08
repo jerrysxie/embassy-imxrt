@@ -618,12 +618,6 @@ impl<'d> BlockingNorStorageBusDriver for FlexspiNorStorageBus<'d, Blocking> {
         // Start the transfer
         self.execute_ip_cmd();
 
-        // Wait for command to complete
-        // This wait is for FlexSPI to send the command to the Flash device
-        // But the command completion in the flash needs to be checked separately
-        // by reading the status register of the flash device
-        self.wait_for_cmd_completion()?;
-
         // Check for any errors during the transfer
         self.check_transfer_status().map_err(|e| {
             e.describe(self);
@@ -643,6 +637,13 @@ impl<'d> BlockingNorStorageBusDriver for FlexspiNorStorageBus<'d, Blocking> {
                 }
             }
         }
+
+        // Wait for command to complete
+        // This wait is for FlexSPI to send the command to the Flash device
+        // But the command completion in the flash needs to be checked separately
+        // by reading the status register of the flash device
+        self.wait_for_cmd_completion()?;
+
         Ok(())
     }
 }
@@ -1024,6 +1025,9 @@ impl<'d> FlexspiNorStorageBus<'d, Blocking> {
                     return Err(NorStorageBusError::StorageBusIoError);
                 }
             }
+
+            // Clear the IPCMDDONE interrupt so that it is not sticky
+            self.info.regs.intr().write(|w| w.ipcmddone().clear_bit_by_one());
         }
         #[cfg(not(feature = "time"))]
         {
