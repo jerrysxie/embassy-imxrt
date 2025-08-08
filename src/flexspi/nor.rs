@@ -1,6 +1,5 @@
 //! FlexSPI NOR Storage Bus Driver module for the NXP RT6xx family of microcontrollers
 //!
-use core::cmp::min;
 
 use embassy_hal_internal::{Peri, PeripheralType};
 #[cfg(feature = "time")]
