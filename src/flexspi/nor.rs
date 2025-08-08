@@ -90,8 +90,8 @@ macro_rules! configure_ports_b {
     };
 }
 
-const FIFO_SLOT_SIZE: u32 = 4; // 4 bytes
-const MAX_TRANSFER_SIZE_PER_COMMAND: usize = 65536;
+const FIFO_SLOT_SIZE: u8 = 4; // 4 bytes
+const MAX_TRANSFER_SIZE_PER_COMMAND: u16 = u16::MAX;
 
 /// The default command sequence number to use.
 ///
@@ -1046,7 +1046,7 @@ impl<'d> FlexspiNorStorageBus<'d, Blocking> {
             return Err(NorStorageBusError::StorageBusIoError);
         }
 
-        let num_rx_watermark_slot = self.rx_watermark / FIFO_SLOT_SIZE as u8;
+        let num_rx_watermark_slot = self.rx_watermark / FIFO_SLOT_SIZE;
 
         for watermark_sized_chunk in read_data.chunks_mut(self.rx_watermark as usize) {
             if watermark_sized_chunk.len() < self.rx_watermark as usize {
