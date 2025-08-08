@@ -62,13 +62,18 @@ async fn main(_spawner: Spawner) {
     info!("i2c example - I2cMaster dropped");
 
     {
+        let config = i2c::master::Config {
+            speed: i2c::master::Speed::Fast,
+            duty_cycle: i2c::master::DutyCycle::new(50).unwrap(),
+        };
+
         info!("i2c example - I2cMaster::new after drop");
         let mut i2c = i2c::master::I2cMaster::new_async(
             p.FLEXCOMM2.reborrow(),
             p.PIO0_18.reborrow(),
             p.PIO0_17.reborrow(),
             Irqs,
-            Default::default(),
+            config,
             p.DMA0_CH5.reborrow(),
         )
         .unwrap();
