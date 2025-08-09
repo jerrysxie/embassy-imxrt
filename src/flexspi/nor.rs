@@ -738,6 +738,7 @@ impl<'d, M: Mode> FlexspiNorStorageBus<'d, M> {
         } else if intr.ahbcmderr().bit_is_set() {
             self.info.regs.intr().write(|w| w.ahbcmderr().clear_bit_by_one());
             if intr.seqtimeout().bit_is_set() {
+                self.info.regs.intr().write(|w| w.seqtimeout().clear_bit_by_one());
                 Err(FlexSpiError::CmdExecErr {
                     result: CmdResult {
                         AhbReadCmdErr: true,
