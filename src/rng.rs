@@ -15,12 +15,12 @@ use crate::{interrupt, peripherals, Peri, PeripheralType};
 static RNG_WAKER: AtomicWaker = AtomicWaker::new();
 
 // The values are based on the NIST SP 800-90B recommendations for entropy source testing
-//   with α = 2 ^(-20), H = 0.8 (NXP recommendation, though questionable), W =  512 samples
+//   with α = 2 ^(-20), H = 0.8 (NXP recommendation, though questionable), W = 512 samples
 const REPETITION_THRESHOLD: usize = 26; // 1 + (-log2(α) / H)
 const ADAPTIVE_PROPORTION_THRESHOLD: usize = 348; // 1 + CRITBINOM(W, power(2, ( −H)), 1 − α).
 const ADAPTIVE_PROPORTION_WINDOW_SIZE: usize = 512;
 
-/// RNG ;error
+/// RNG error
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {
@@ -32,9 +32,6 @@ pub enum Error {
 
     /// Frequency Count Fail
     FreqCountFail,
-
-    /// Entropy Error.
-    EntropyError,
 }
 
 /// RNG interrupt handler.
@@ -87,7 +84,7 @@ fn sw_entropy_test(entropy: &[u32]) -> Result<(), Error> {
 
                 if repetition_count >= REPETITION_THRESHOLD {
                     error!("Repetition count exceeded threshold: {}", repetition_count);
-                    return Err(Error::EntropyError);
+                    return Err(Error::SeedError);
                 }
             } else {
                 repetition_count = 1;
@@ -103,7 +100,7 @@ fn sw_entropy_test(entropy: &[u32]) -> Result<(), Error> {
             "Adaptive proportion count exceeded threshold: {}",
             adaptive_proportion_count
         );
-        return Err(Error::EntropyError);
+        return Err(Error::SeedError);
     }
 
     Ok(())
