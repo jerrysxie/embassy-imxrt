@@ -459,6 +459,7 @@ impl From<FlexSpiError> for NorStorageBusError {
 
 impl FlexSpiError {
     /// Get the description of the error
+    #[cfg(feature = "defmt")]
     pub fn describe<M: Mode>(&self, flexspi: &FlexspiNorStorageBus<M>) {
         match self {
             FlexSpiError::CmdGrantErr { result } => {
@@ -619,6 +620,7 @@ impl BlockingNorStorageBusDriver for FlexspiNorStorageBus<'_, Blocking> {
 
         // Check for any errors during the transfer
         self.check_transfer_status().map_err(|e| {
+            #[cfg(feature = "defmt")]
             e.describe(self);
             <FlexSpiError as Into<FlexSpiError>>::into(e)
         })?;
@@ -1036,8 +1038,9 @@ impl FlexspiNorStorageBus<'_, Blocking> {
 
         let error = self.check_transfer_status();
 
-        if let Err(e) = error {
-            e.describe(self);
+        if let Err(_e) = error {
+            #[cfg(feature = "defmt")]
+            _e.describe(self);
             return Err(NorStorageBusError::StorageBusIoError);
         }
 
@@ -1092,8 +1095,9 @@ impl FlexspiNorStorageBus<'_, Blocking> {
     fn write_cmd_data(&mut self, write_data: &[u8]) -> Result<(), NorStorageBusError> {
         // Check for any errors during the transfer
         let error = self.check_transfer_status();
-        if let Err(e) = error {
-            e.describe(self);
+        if let Err(_e) = error {
+            #[cfg(feature = "defmt")]
+            _e.describe(self);
             return Err(NorStorageBusError::StorageBusIoError);
         }
 
@@ -1148,6 +1152,7 @@ impl FlexspiNorStorageBus<'_, Blocking> {
 
 impl FlexSpiConfigurationPort {
     /// Initialize FlexSPI
+    #[allow(clippy::result_unit_err)]
     pub fn configure_flexspi(&mut self, config: &FlexspiConfig) -> Result<(), ()> {
         let regs = self.info.regs;
 
@@ -1332,6 +1337,7 @@ impl FlexSpiConfigurationPort {
     }
 
     /// Configure the flash self.flexspi_ref based on the external flash device
+    #[allow(clippy::result_unit_err)]
     pub fn configure_device_port(
         &self,
         device_config: &FlexspiDeviceConfig,
@@ -1552,6 +1558,7 @@ impl<'d> FlexspiNorStorageBus<'d, Blocking> {
     }
 
     /// Create a new FlexSPI instance in blocking mode with octal configuration
+    #[allow(clippy::too_many_arguments)]
     pub fn new_blocking_octal_config<T: Instance>(
         _inst: Peri<'d, T>,
         data0: Peri<'d, impl FlexSpiPin>,
