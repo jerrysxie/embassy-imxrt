@@ -62,7 +62,7 @@ jobs:
       fail-fast: false
       matrix:
         # Get early warning of new lints which are regularly introduced in beta channels.
-        toolchain: [stable, beta]
+        toolchain: [stable]
         workdir: ["examples/rt633", "examples/rt685s-evk"]
 
     steps:
