@@ -77,7 +77,7 @@ jobs:
           components: clippy
 
       - name: cargo clippy
-        working-directory: ${{ matrix.example_directory }}
+        working-directory: ${{ matrix.workdir }}
         run: |
           cargo clippy --locked -- -Dwarnings -F clippy::suspicious -F clippy::correctness -F clippy::perf -F clippy::style
 
