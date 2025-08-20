@@ -675,9 +675,7 @@ impl<'d> Espi<'d> {
                     direction,
                 })))
             }
-            _ => {
-                Poll::Pending
-            }
+            _ => Poll::Pending,
         }
     }
 
