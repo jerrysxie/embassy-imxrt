@@ -945,7 +945,7 @@ impl embedded_hal_1::digital::StatefulOutputPin for Flex<'_, SenseEnabled> {
     }
 }
 
-impl<'d> embedded_hal_async::digital::Wait for Flex<'d, SenseEnabled> {
+impl embedded_hal_async::digital::Wait for Flex<'_, SenseEnabled> {
     #[inline]
     async fn wait_for_high(&mut self) -> Result<(), Self::Error> {
         self.wait_for_high().await;
@@ -993,7 +993,7 @@ impl embedded_hal_1::digital::InputPin for Input<'_> {
     }
 }
 
-impl<'d> embedded_hal_async::digital::Wait for Input<'d> {
+impl embedded_hal_async::digital::Wait for Input<'_> {
     #[inline]
     async fn wait_for_high(&mut self) -> Result<(), Self::Error> {
         self.wait_for_high().await;

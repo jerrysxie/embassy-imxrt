@@ -187,9 +187,9 @@ pub enum PortConfig {
     MasterFlash,
 }
 
-impl Into<Type> for PortConfig {
-    fn into(self) -> Type {
-        match self {
+impl From<PortConfig> for Type {
+    fn from(val: PortConfig) -> Self {
+        match val {
             PortConfig::Unconfigured => Type::Unconfigured,
             PortConfig::AcpiEndpoint { .. } => Type::AcpiEnd,
             PortConfig::AcpiIndex => Type::AcpiIndex,
@@ -478,7 +478,7 @@ impl<'d> Espi<'d> {
 
         let mut instance = Espi::<'d> {
             info: T::info(),
-            config: config,
+            config,
             _phantom: PhantomData,
         };
 
@@ -658,25 +658,25 @@ impl<'d> Espi<'d> {
                 };
 
                 Poll::Ready(Ok(Event::PeripheralEvent(PortEvent {
-                    port: port,
+                    port,
                     base_addr: address,
                     offset: idxoff,
-                    length: length,
-                    direction: direction,
+                    length,
+                    direction,
                 })))
             }
             PortConfig::MailboxSplitOOB { offset, .. } => {
                 let address = self.config.ram_base + offset as u32;
                 Poll::Ready(Ok(Event::OOBEvent(PortEvent {
-                    port: port,
+                    port,
                     base_addr: address,
                     offset: 0,
-                    length: length,
-                    direction: direction,
+                    length,
+                    direction,
                 })))
             }
             _ => {
-                return Poll::Pending;
+                Poll::Pending
             }
         }
     }

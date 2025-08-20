@@ -597,7 +597,7 @@ impl FlexSpiError {
     }
 }
 
-impl<'d> BlockingNorStorageBusDriver for FlexspiNorStorageBus<'d, Blocking> {
+impl BlockingNorStorageBusDriver for FlexspiNorStorageBus<'_, Blocking> {
     fn send_command(
         &mut self,
         cmd: NorStorageCmd,
@@ -647,7 +647,7 @@ impl<'d> BlockingNorStorageBusDriver for FlexspiNorStorageBus<'d, Blocking> {
     }
 }
 
-impl<'d, M: Mode> FlexspiNorStorageBus<'d, M> {
+impl<M: Mode> FlexspiNorStorageBus<'_, M> {
     /// Set the command sequence in the FlexSPI LUT to use.
     ///
     /// All commands sent over the FlexSPI bus are first programmed into a lookup-table.
@@ -984,7 +984,7 @@ impl<'d, M: Mode> FlexspiNorStorageBus<'d, M> {
     }
 }
 
-impl<'d> FlexspiNorStorageBus<'d, Blocking> {
+impl FlexspiNorStorageBus<'_, Blocking> {
     fn read_data(&mut self, cmd: NorStorageCmd, read_buf: &mut [u8]) -> Result<(), NorStorageBusError> {
         let size = cmd.data_bytes.ok_or(NorStorageBusError::StorageBusInternalError)?;
 
@@ -1097,7 +1097,7 @@ impl<'d> FlexspiNorStorageBus<'d, Blocking> {
             return Err(NorStorageBusError::StorageBusIoError);
         }
 
-        let num_tx_watermark_slot = self.tx_watermark / FIFO_SLOT_SIZE as u8;
+        let num_tx_watermark_slot = self.tx_watermark / FIFO_SLOT_SIZE;
 
         for watermark_sized_chunk in write_data.chunks(self.tx_watermark as usize) {
             // Wait for space in TX FIFO
@@ -1379,34 +1379,32 @@ impl FlexSpiConfigurationPort {
                         .ovrdval()
                         .bits(0x00)
                 };
+            } else if device_config.flexspi_root_clk >= CLOCK_100MHZ {
+                unsafe {
+                    w.dllen()
+                        .set_bit()
+                        .slvdlytarget()
+                        .bits(0xF)
+                        .ovrden()
+                        .clear_bit()
+                        .ovrdval()
+                        .bits(0x00);
+                }
             } else {
-                if device_config.flexspi_root_clk >= CLOCK_100MHZ {
-                    unsafe {
-                        w.dllen()
-                            .set_bit()
-                            .slvdlytarget()
-                            .bits(0xF)
-                            .ovrden()
-                            .clear_bit()
-                            .ovrdval()
-                            .bits(0x00);
-                    }
-                } else {
-                    let temp = (device_config.data_valid_time) as u32 * 1000; /* Convert data valid time in ns to ps. */
-                    let mut dll_value = temp / DELAYCELLUNIT;
-                    if dll_value * DELAYCELLUNIT < temp {
-                        dll_value += 1;
-                    }
-                    unsafe {
-                        w.dllen()
-                            .clear_bit()
-                            .slvdlytarget()
-                            .bits(0x00)
-                            .ovrden()
-                            .set_bit()
-                            .ovrdval()
-                            .bits((dll_value) as u8);
-                    }
+                let temp = (device_config.data_valid_time) as u32 * 1000; /* Convert data valid time in ns to ps. */
+                let mut dll_value = temp / DELAYCELLUNIT;
+                if dll_value * DELAYCELLUNIT < temp {
+                    dll_value += 1;
+                }
+                unsafe {
+                    w.dllen()
+                        .clear_bit()
+                        .slvdlytarget()
+                        .bits(0x00)
+                        .ovrden()
+                        .set_bit()
+                        .ovrdval()
+                        .bits((dll_value) as u8);
                 }
             }
             w

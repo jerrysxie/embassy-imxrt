@@ -316,7 +316,7 @@ impl<'a> I2cMaster<'a, Blocking> {
 
         i2cregs.mstdat().write(|w|
             // SAFETY: only unsafe due to .bits usage
-            unsafe { w.data().bits(address << 1 | u8::from(is_read)) });
+            unsafe { w.data().bits((address << 1) | u8::from(is_read)) });
 
         i2cregs.mstctl().write(|w| w.mststart().set_bit());
 
@@ -557,7 +557,7 @@ impl<'a> I2cMaster<'a, Async> {
 
         i2cregs.mstdat().write(|w|
             // SAFETY: only unsafe due to .bits usage
-            unsafe { w.data().bits(address << 1 | u8::from(is_read)) });
+            unsafe { w.data().bits((address << 1) | u8::from(is_read)) });
 
         i2cregs.mstctl().write(|w| w.mststart().set_bit());
 
