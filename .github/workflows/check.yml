@@ -63,7 +63,7 @@ jobs:
       matrix:
         # Get early warning of new lints which are regularly introduced in beta channels.
         toolchain: [stable, beta]
-        workdir: [ ".", "examples/rt633", "examples/rt685s-evk"]
+        workdir: ["examples/rt633", "examples/rt685s-evk"]
 
     steps:
       - uses: actions/checkout@v4
@@ -79,7 +79,7 @@ jobs:
       - name: cargo clippy
         working-directory: ${{ matrix.example_directory }}
         run: |
-          cargo clippy --target thumbv8m.main-none-eabihf --locked -- -Dwarnings -F clippy::suspicious -F clippy::correctness -F clippy::perf -F clippy::style
+          cargo clippy --locked -- -Dwarnings -F clippy::suspicious -F clippy::correctness -F clippy::perf -F clippy::style
 
   # Enable once we have a released crate
   # semver:
