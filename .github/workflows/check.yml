@@ -50,7 +50,7 @@ jobs:
         run: cargo fmt --check
         working-directory: ${{ matrix.workdir }}
 
-  clippy:
+  clippy-examples:
     runs-on: ubuntu-latest
     name: ${{ matrix.toolchain }} / clippy
 
@@ -77,11 +77,9 @@ jobs:
           components: clippy
 
       - name: cargo clippy
-        uses: giraffate/clippy-action@v1
-        with:
-          reporter: 'github-pr-review'
-          clippy_flags: -- -Dwarnings -F clippy::suspicious -F clippy::correctness -F clippy::perf -F clippy::style
-          workdir: ${{ matrix.workdir }}
+        working-directory: ${{ matrix.example_directory }}
+        run: |
+          cargo clippy --target thumbv8m.main-none-eabihf --locked -- -Dwarnings -F clippy::suspicious -F clippy::correctness -F clippy::perf -F clippy::style
 
   # Enable once we have a released crate
   # semver:

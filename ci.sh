@@ -120,6 +120,9 @@ FEATURE_COMBINATIONS=(
 )
 cargo batch \
       $(for features in "${FEATURE_COMBINATIONS[@]}"; do
-	  echo "--- build --manifest-path Cargo.toml --target thumbv8m.main-none-eabihf --features $features "
-	  echo "--- build --release --manifest-path Cargo.toml --target thumbv8m.main-none-eabihf --features $features "
+	  echo "--- build --locked --manifest-path Cargo.toml --target thumbv8m.main-none-eabihf --features $features "
+	  echo "--- build --locked --release --manifest-path Cargo.toml --target thumbv8m.main-none-eabihf --features $features "
 	done) $BUILD_EXTRA
+
+cargo clippy --locked --manifest-path Cargo.toml --target thumbv8m.main-none-eabihf --features "mimxrt633s,rt,time-driver-os-timer,unstable-pac" -- -Dwarnings -F clippy::suspicious -F clippy::correctness -F clippy::perf -F clippy::style
+cargo clippy --locked --manifest-path Cargo.toml --target thumbv8m.main-none-eabihf --features "mimxrt633s,rt,time-driver-rtc,unstable-pac" -- -Dwarnings -F clippy::suspicious -F clippy::correctness -F clippy::perf -F clippy::style
