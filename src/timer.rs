@@ -516,7 +516,7 @@ impl From<TriggerInput> for crate::pac::inputmux::ct32bit_cap::ct32bit_cap_sel::
     }
 }
 
-impl<'p, M: Mode, P: CaptureEvent> CaptureTimer<'p, M, P> {
+impl<M: Mode, P: CaptureEvent> CaptureTimer<'_, M, P> {
     /// Returns the captured clock count
     /// Captured clock = (Capture value - previous counter value)
     fn get_event_capture_time_us(&self) -> u32 {
@@ -759,9 +759,9 @@ impl<M: Mode> CountingTimer<M> {
     }
 }
 
-impl<'p> CountingTimer<Async> {
+impl CountingTimer<Async> {
     /// Creates a new `CountingTimer` in asynchronous mode.
-    pub fn new_async<T: Instance>(_inst: Peri<'p, T>, clk: impl ConfigurableClock) -> Self {
+    pub fn new_async<T: Instance>(_inst: Peri<'_, T>, clk: impl ConfigurableClock) -> Self {
         let info = T::info();
         T::interrupt_enable();
         Self {
@@ -790,9 +790,9 @@ impl<'p> CountingTimer<Async> {
     }
 }
 
-impl<'p> CountingTimer<Blocking> {
+impl CountingTimer<Blocking> {
     /// Creates a new `CountingTimer` in blocking mode.
-    pub fn new_blocking<T: Instance>(_inst: Peri<'p, T>, clk: impl ConfigurableClock) -> Self {
+    pub fn new_blocking<T: Instance>(_inst: Peri<'_, T>, clk: impl ConfigurableClock) -> Self {
         let info = T::info();
         T::interrupt_enable();
         Self {
@@ -826,7 +826,7 @@ impl<M: Mode> Drop for CountingTimer<M> {
     }
 }
 
-impl<'p, M: Mode, P: CaptureEvent> Drop for CaptureTimer<'p, M, P> {
+impl<M: Mode, P: CaptureEvent> Drop for CaptureTimer<'_, M, P> {
     fn drop(&mut self) {
         self.info.cap_timer_interrupt_disable();
         self.info.cap_timer_disable_falling_edge_event();
