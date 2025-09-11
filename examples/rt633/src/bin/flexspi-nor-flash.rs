@@ -8,6 +8,10 @@ use embassy_imxrt::gpio;
 use embassy_time::Timer;
 use {defmt_rtt as _, panic_probe as _, rt633_examples as _};
 
+/* This example demonstrates usage of the FlexSPI NOR flash driver to read, erase, and program.
+  This is for the lower level flash operations that is not safe. Application should use the
+  embedded-storage traits wrapper instead.
+*/
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
     let mut p = embassy_imxrt::init(Default::default());
