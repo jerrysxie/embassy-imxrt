@@ -27,7 +27,7 @@ async fn main(_spawner: Spawner) {
     // Create a new FlexSPI NOR flash driver.
     // NOTE: This relies on the FlexSPI having been configured already by having a valid FCB in the flash memory.
     let mut flash = unsafe { FlexSpiNorFlash::with_probed_config(p.FLEXSPI.reborrow(), 2, 2) }
-        .map_err(|e| defmt::error!("Failed to initialize FlexSPI peripheral: {}", e))
+        .map_err(|e| error!("Failed to initialize FlexSPI peripheral: {}", e))
         .unwrap();
 
     // Read last sector.
@@ -35,17 +35,17 @@ async fn main(_spawner: Spawner) {
     let last_sector_addr = 0x1F_F000;
     flash
         .read(last_sector_addr, &mut last_sector)
-        .map_err(|e| defmt::error!("Failed to read last sector from flash: {}", e))
+        .map_err(|e| error!("Failed to read last sector from flash: {}", e))
         .unwrap();
     defmt::info!("Last sector[0..16] (pre-erase): {}", last_sector[0..16]);
 
     unsafe { flash.erase_sector(last_sector_addr) }
-        .map_err(|e| defmt::error!("Failed to erase last sector from flash: {}", e))
+        .map_err(|e| error!("Failed to erase last sector from flash: {}", e))
         .unwrap();
 
     flash
         .read(last_sector_addr, &mut last_sector)
-        .map_err(|e| defmt::error!("Failed to read last sector from flash: {}", e))
+        .map_err(|e| error!("Failed to read last sector from flash: {}", e))
         .unwrap();
     defmt::info!("Last sector[0..16] (post-erase): {}", last_sector);
 
@@ -57,13 +57,13 @@ async fn main(_spawner: Spawner) {
             &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
         )
     }
-    .map_err(|e| defmt::error!("Failed to program first chunk of last sector: {}", e))
+    .map_err(|e| error!("Failed to program first chunk of last sector: {}", e))
     .unwrap();
     defmt::info!("Programmed first chunk of last sector");
 
     flash
         .read(last_sector_addr, &mut last_sector)
-        .map_err(|e| defmt::error!("Failed to read last sector from flash: {}", e))
+        .map_err(|e| error!("Failed to read last sector from flash: {}", e))
         .unwrap();
     defmt::info!("Last sector[0..16] (post-program): {}", last_sector);
 
