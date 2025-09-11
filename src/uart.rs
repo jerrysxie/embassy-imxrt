@@ -308,8 +308,7 @@ impl<'a, M: Mode> Uart<'a, M> {
         let regs = T::info().regs;
 
         if tx.is_some() {
-            regs.fifocfg()
-                .modify(|_, w| w.emptytx().set_bit().enabletx().enabled().waketx().enabled());
+            regs.fifocfg().modify(|_, w| w.emptytx().set_bit().enabletx().enabled());
 
             // clear FIFO error
             regs.fifostat().write(|w| w.txerr().set_bit());
