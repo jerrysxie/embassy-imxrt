@@ -70,7 +70,7 @@ static FCB: FlexSPIFlashConfigurationBlock = FlexSPIFlashConfigurationBlock::bui
         0,
         0,
         0,
-        // Sequence 8 - Erase Block (64KB)
+        // Sequence 8 - Erase Block (32KB)
         flexspi_lut_seq(CMD_SDR, Single, 0x52, RADDR_SDR, Single, 0x18),
         0,
         0,
@@ -108,6 +108,7 @@ static FCB: FlexSPIFlashConfigurationBlock = FlexSPIFlashConfigurationBlock::bui
         0,
     ])
     .serial_nor_type(SerialNORType::StandardSpi)
+    .block_size(0x8_000)
     .flash_state_ctx(0);
 
 #[link_section = ".keystore"]
