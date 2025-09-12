@@ -3,11 +3,11 @@ use core::future::poll_fn;
 use core::marker::PhantomData;
 use core::task::Poll;
 
-use embassy_hal_internal::interrupt::InterruptExt;
 use embassy_sync::waitqueue::AtomicWaker;
 use paste::paste;
 
 use crate::clocks::{enable_and_reset, ClockConfig, ConfigurableClock};
+use crate::interrupt::typelevel::Interrupt;
 use crate::iopctl::{DriveMode, DriveStrength, Inverter, IopctlPin as Pin, Pull, SlewRate};
 use crate::pac::clkctl1::ct32bitfclksel::Sel;
 use crate::pac::Clkctl1;
@@ -149,11 +149,11 @@ pub struct CaptureTimer<'p, M: Mode, P: CaptureEvent> {
 }
 
 /// A timer that counts down to zero and calls a user-defined callback.
-pub struct CountingTimer<M: Mode> {
+pub struct CountingTimer<'p, M: Mode> {
     id: usize,
     clk_freq: u32,
     timeout: u32,
-    _phantom: core::marker::PhantomData<M>,
+    _phantom: core::marker::PhantomData<&'p M>,
     info: Info,
 }
 
@@ -172,18 +172,16 @@ unsafe impl Send for Info {}
 trait SealedInstance {
     fn info() -> Info;
 }
-trait InterruptHandler {
-    fn interrupt_enable();
-}
+
 /// shared functions between Controller and Target operation
 #[allow(private_bounds)]
-pub trait Instance: SealedInstance + PeripheralType + 'static + Send + InterruptHandler {
+pub trait Instance: SealedInstance + PeripheralType + 'static + Send {
     /// Interrupt for this SPI instance.
     type Interrupt: interrupt::typelevel::Interrupt;
 }
 
 /// Interrupt handler for the CTimer modules.
-pub struct CtimerInterruptHandler<T: Instance> {
+pub struct InterruptHandler<T: Instance> {
     _phantom: core::marker::PhantomData<T>,
 }
 
@@ -427,6 +425,7 @@ macro_rules! impl_instance {
                     }
                 }
             }
+
             impl SealedInstance for crate::peripherals::[<CTIMER $n _ CAPTURE _ CHANNEL $channel>] {
                 fn info() -> Info {
                     Info {
@@ -437,29 +436,13 @@ macro_rules! impl_instance {
                     }
                 }
             }
+
             impl Instance for crate::peripherals::[<CTIMER $n _ COUNT _ CHANNEL $channel>] {
                 type Interrupt = crate::interrupt::typelevel::[<CTIMER $n>];
             }
+
             impl Instance for crate::peripherals::[<CTIMER $n _ CAPTURE _ CHANNEL $channel>] {
                 type Interrupt = crate::interrupt::typelevel::[<CTIMER $n>];
-            }
-
-            impl InterruptHandler for  crate::peripherals::[<CTIMER $n _ COUNT _ CHANNEL $channel>] {
-                fn interrupt_enable() {
-                    unsafe {
-                        interrupt::[<CTIMER $n>].unpend();
-                        interrupt::[<CTIMER $n>].enable();
-                    }
-                }
-            }
-
-            impl InterruptHandler for  crate::peripherals::[<CTIMER $n _ CAPTURE _ CHANNEL $channel>] {
-                fn interrupt_enable() {
-                    unsafe {
-                        interrupt::[<CTIMER $n>].unpend();
-                        interrupt::[<CTIMER $n>].enable();
-                    }
-                }
             }
         }
     };
@@ -568,10 +551,18 @@ impl<M: Mode, P: CaptureEvent> CaptureTimer<'_, M, P> {
 
 impl<'p, P: CaptureEvent> CaptureTimer<'p, Async, P> {
     /// Creates a new `CaptureTimer` in asynchronous mode.
-    pub fn new_async<T: Instance>(_inst: Peri<'p, T>, pin: Peri<'p, P>, clk: impl ConfigurableClock) -> Self {
+    pub fn new_async<T: Instance>(
+        _inst: Peri<'p, T>,
+        pin: Peri<'p, P>,
+        clk: impl ConfigurableClock,
+        _irq: impl interrupt::typelevel::Binding<T::Interrupt, InterruptHandler<T>> + 'p,
+    ) -> Self {
         let info = T::info();
         let module = info.module;
-        T::interrupt_enable();
+
+        T::Interrupt::unpend();
+        unsafe { T::Interrupt::enable() };
+
         Self {
             id: COUNT_CHANNEL + module * CHANNEL_PER_MODULE + info.channel,
             event_clock_counts: 0,
@@ -654,7 +645,7 @@ impl<'p, P: CaptureEvent> CaptureTimer<'p, Blocking, P> {
     pub fn new_blocking<T: Instance>(_inst: Peri<'p, T>, pin: Peri<'p, P>, clk: impl ConfigurableClock) -> Self {
         let info = T::info();
         let module = info.module;
-        T::interrupt_enable();
+
         Self {
             id: COUNT_CHANNEL + module * CHANNEL_PER_MODULE + info.channel,
             event_clock_counts: 0,
@@ -716,7 +707,7 @@ impl<'p, P: CaptureEvent> CaptureTimer<'p, Blocking, P> {
     }
 }
 
-impl<M: Mode> CountingTimer<M> {
+impl<'p, M: Mode> CountingTimer<'p, M> {
     fn reset_and_enable(&self) {
         let reg = self.info.regs;
         if reg.tcr().read().cen().is_disabled() {
@@ -759,11 +750,18 @@ impl<M: Mode> CountingTimer<M> {
     }
 }
 
-impl CountingTimer<Async> {
+impl<'p> CountingTimer<'p, Async> {
     /// Creates a new `CountingTimer` in asynchronous mode.
-    pub fn new_async<T: Instance>(_inst: Peri<'_, T>, clk: impl ConfigurableClock) -> Self {
+    pub fn new_async<T: Instance>(
+        _inst: Peri<'p, T>,
+        clk: impl ConfigurableClock,
+        _irq: impl interrupt::typelevel::Binding<T::Interrupt, InterruptHandler<T>> + 'p,
+    ) -> Self {
         let info = T::info();
-        T::interrupt_enable();
+
+        T::Interrupt::unpend();
+        unsafe { T::Interrupt::enable() };
+
         Self {
             id: info.module * CHANNEL_PER_MODULE + info.channel,
             clk_freq: clk.get_clock_rate().unwrap(),
@@ -790,11 +788,11 @@ impl CountingTimer<Async> {
     }
 }
 
-impl CountingTimer<Blocking> {
+impl<'p> CountingTimer<'p, Blocking> {
     /// Creates a new `CountingTimer` in blocking mode.
-    pub fn new_blocking<T: Instance>(_inst: Peri<'_, T>, clk: impl ConfigurableClock) -> Self {
+    pub fn new_blocking<T: Instance>(_inst: Peri<'p, T>, clk: impl ConfigurableClock) -> Self {
         let info = T::info();
-        T::interrupt_enable();
+
         Self {
             id: info.module * CHANNEL_PER_MODULE + info.channel,
             clk_freq: clk.get_clock_rate().unwrap(),
@@ -816,7 +814,7 @@ impl CountingTimer<Blocking> {
     }
 }
 
-impl<M: Mode> Drop for CountingTimer<M> {
+impl<'p, M: Mode> Drop for CountingTimer<'p, M> {
     fn drop(&mut self) {
         self.info.count_timer_disable_interrupt();
         self.info.regs.mr(self.info.channel).write(|w| unsafe {
@@ -1109,7 +1107,7 @@ pub fn init() {
     reg.ct32bitfclksel(4).write(|w| w.sel().sfro_clk());
 }
 
-impl<T: Instance> interrupt::typelevel::Handler<T::Interrupt> for CtimerInterruptHandler<T> {
+impl<T: Instance> interrupt::typelevel::Handler<T::Interrupt> for InterruptHandler<T> {
     unsafe fn on_interrupt() {
         let module = T::info().module;
         let reg = T::info().regs;
