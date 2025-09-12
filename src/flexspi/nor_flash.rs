@@ -355,7 +355,7 @@ impl<'a> FlexSpiNorFlash<'a> {
                     start: sequence::READ_STATUS,
                     count: 1,
                     address: 0,
-                    data_size: 4,
+                    data_size: 1,
                     parallel: false,
                 })
                 .map_err(|e| ReadError::Command(e.into()))?;
@@ -364,7 +364,7 @@ impl<'a> FlexSpiNorFlash<'a> {
                 .map_err(|e| ReadError::Command(e.into()))?;
         };
 
-        let mut buffer = [0; 4];
+        let mut buffer = [0; 1];
         let read = self.flex_spi.drain_rx_fifo(&mut buffer);
 
         if read != buffer.len() {
@@ -375,9 +375,7 @@ impl<'a> FlexSpiNorFlash<'a> {
             .into());
         }
 
-        Ok(Status {
-            raw: u32::from_le_bytes(buffer),
-        })
+        Ok(Status(buffer[0]))
     }
 
     /// Set the write enable latch without verifying that it is actually enabled.
@@ -425,22 +423,20 @@ impl<'a> FlexSpiNorFlash<'a> {
 
 /// The flash memory status.
 #[derive(Copy, Clone)]
-pub struct Status {
-    /// The raw status returned by the flash chip.
-    pub raw: u32,
-}
+#[repr(transparent)]
+pub struct Status(u8);
 
 impl Status {
     /// Check if there is a write operation in progress.
     pub fn is_write_in_progress(self) -> bool {
         // TODO: Taken from Macronix datasheet, but is this universal?
-        self.raw & 0x01 != 0
+        self.0 & 0x01 != 0
     }
 
     /// Check if the write-enable latch it set.
     pub fn is_write_enabled(self) -> bool {
         // TODO: Taken from Macronix datasheet, but is this universal?
-        self.raw & 0x02 != 0
+        self.0 & 0x02 != 0
     }
 }
 
