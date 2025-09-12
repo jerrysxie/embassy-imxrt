@@ -427,6 +427,10 @@ impl<'a> FlexSpiNorFlash<'a> {
 pub struct Status(u8);
 
 impl Status {
+    /// Returns the raw status byte.
+    pub fn raw(self) -> u8 {
+        self.0
+    }
     /// Check if there is a write operation in progress.
     pub fn is_write_in_progress(self) -> bool {
         // TODO: Taken from Macronix datasheet, but is this universal?
