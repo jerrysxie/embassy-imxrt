@@ -134,6 +134,9 @@ jobs:
 
       - name: Install stable
         uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: clippy
 
       - name: rustup target add thumbv8m.main-none-eabihf
         run: rustup target add thumbv8m.main-none-eabihf
