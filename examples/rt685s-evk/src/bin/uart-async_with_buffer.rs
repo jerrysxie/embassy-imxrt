@@ -20,7 +20,7 @@ async fn reader(mut rx: UartRx<'static, Async>) {
     info!("Reading...");
     let mut counter = 0;
     loop {
-        let mut buf = [0; 1024];
+        let mut buf = [0; BUFLEN / 2];
         rx.read(&mut buf).await.unwrap();
         // info!("RX {:?}", buf);
 
@@ -56,12 +56,15 @@ async fn main(spawner: Spawner) {
     spawner.must_spawn(reader(rx));
 
     info!("Writing...");
-    let mut data: [u8; 1024] = [0; 1024];
-    for (i, b) in data.iter_mut().enumerate() {
-        *b = i as u8;
-    }
 
+    let mut counter = 1;
     loop {
+        let mut data: [u8; BUFLEN / 2] = [0; BUFLEN / 2];
+        for (i, b) in data.iter_mut().enumerate() {
+            *b = counter;
+        }
         tx.write(&data).await.unwrap();
+
+        counter = counter.wrapping_add(1);
     }
 }

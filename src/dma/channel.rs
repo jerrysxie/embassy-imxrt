@@ -5,8 +5,9 @@ use core::marker::PhantomData;
 use embassy_sync::waitqueue::AtomicWaker;
 
 use super::DESCRIPTORS;
-use super::PING_PONG_DESCRIPTORS;
+use super::PING_DESCRIPTORS;
 use super::PING_PONG_STATUS;
+use super::PONG_DESCRIPTORS;
 use super::{BufferConsumeStatus, PingPongSelector};
 use crate::dma::DmaInfo;
 use crate::dma::transfer::{Direction, Mode, Transfer, TransferOptions};
@@ -223,22 +224,28 @@ impl<'d> Channel<'d> {
         });
 
         #[allow(clippy::indexing_slicing)]
-        let descriptor_a = unsafe { &mut DESCRIPTORS.list[channel] };
-        let descriptor_b = unsafe { &mut PING_PONG_DESCRIPTORS.list[channel] };
+        let descriptor_initial = unsafe { &mut DESCRIPTORS.list[channel] };
+        let descriptor_a = unsafe { &mut PING_DESCRIPTORS.list[channel] };
+        let descriptor_b = unsafe { &mut PONG_DESCRIPTORS.list[channel] };
 
         // Configure the channel descriptor
         // NOTE: the DMA controller expects the memory buffer end address but peripheral address is actual
         let xfer_cfg = self.info.regs.channel(channel).xfercfg().read();
+        descriptor_initial.reserved = 0;
         descriptor_a.reserved = xfer_cfg.bits();
         descriptor_b.reserved = xfer_cfg.bits();
 
-        descriptor_a.src_data_end_addr = srcbase as u32;
-        descriptor_a.dst_data_end_addr = dstbase_a as u32 + (xfercount * xferwidth) as u32;
-        descriptor_a.nxt_desc_link_addr = descriptor_b as *const _ as u32;
+        descriptor_initial.src_data_end_addr = srcbase as u32;
+        descriptor_initial.dst_data_end_addr = dstbase_a as u32 + (xfercount * xferwidth) as u32;
+        descriptor_initial.nxt_desc_link_addr = descriptor_b as *const _ as u32;
 
         descriptor_b.src_data_end_addr = srcbase as u32;
         descriptor_b.dst_data_end_addr = dstbase_b as u32 + (xfercount * xferwidth) as u32;
         descriptor_b.nxt_desc_link_addr = descriptor_a as *const _ as u32;
+
+        descriptor_a.src_data_end_addr = srcbase as u32;
+        descriptor_a.dst_data_end_addr = dstbase_a as u32 + (xfercount * xferwidth) as u32;
+        descriptor_a.nxt_desc_link_addr = descriptor_b as *const _ as u32;
 
         let ping_pong_status = unsafe { &mut PING_PONG_STATUS[channel] };
         ping_pong_status.current = PingPongSelector::BufferA;

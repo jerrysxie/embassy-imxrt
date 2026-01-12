@@ -50,8 +50,18 @@ static mut DESCRIPTORS: DescriptorBlock = DescriptorBlock {
     }; DMA_CHANNEL_COUNT],
 };
 
-/// Ping-pong Reload Descriptros
-static mut PING_PONG_DESCRIPTORS: DescriptorBlock = DescriptorBlock {
+/// Ping Reload Descriptros
+static mut PING_DESCRIPTORS: DescriptorBlock = DescriptorBlock {
+    list: [ChannelDescriptor {
+        reserved: 0,
+        src_data_end_addr: 0,
+        dst_data_end_addr: 0,
+        nxt_desc_link_addr: 0,
+    }; DMA_CHANNEL_COUNT],
+};
+
+/// Pong Reload Descriptros
+static mut PONG_DESCRIPTORS: DescriptorBlock = DescriptorBlock {
     list: [ChannelDescriptor {
         reserved: 0,
         src_data_end_addr: 0,
