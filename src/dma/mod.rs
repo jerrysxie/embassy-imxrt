@@ -50,6 +50,45 @@ static mut DESCRIPTORS: DescriptorBlock = DescriptorBlock {
     }; DMA_CHANNEL_COUNT],
 };
 
+/// Ping-pong Reload Descriptros
+static mut PING_PONG_DESCRIPTORS: DescriptorBlock = DescriptorBlock {
+    list: [ChannelDescriptor {
+        reserved: 0,
+        src_data_end_addr: 0,
+        dst_data_end_addr: 0,
+        nxt_desc_link_addr: 0,
+    }; DMA_CHANNEL_COUNT],
+};
+
+/// Ping Pong buffer select
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum PingPongSelector {
+    BufferA,
+    BufferB,
+}
+
+/// Ping Pong buffer select
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum BufferConsumeStatus {
+    Committed,
+    Granted,
+}
+
+#[derive(Copy, Clone, Debug)]
+struct PingPongDescriptorStatus {
+    current: PingPongSelector,
+    buffer_a_status: BufferConsumeStatus,
+    buffer_b_status: BufferConsumeStatus,
+    transfer_count: u64,
+}
+
+static mut PING_PONG_STATUS: [PingPongDescriptorStatus; DMA_CHANNEL_COUNT] = [PingPongDescriptorStatus {
+    current: PingPongSelector::BufferA,
+    buffer_a_status: BufferConsumeStatus::Committed,
+    buffer_b_status: BufferConsumeStatus::Committed,
+    transfer_count: 0,
+}; DMA_CHANNEL_COUNT];
+
 /// DMA errors
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -101,6 +140,45 @@ fn dma0_irq_handler<const N: usize>(wakers: &[AtomicWaker; N]) {
                 // Clear the pending interrupt for this channel
                 // SAFETY: unsafe due to .bits usage
                 reg.inta0().write(|w| unsafe { w.ia().bits(1 << channel) });
+
+                // For continuous transfers, retrigger the transfer if there is a reload configured and there is free buffer descriptor
+                if reg.channel(channel as usize).xfercfg().read().reload().bit_is_set() {
+                    let ping_pong_status = unsafe { &mut PING_PONG_STATUS[channel as usize] };
+
+                    if ping_pong_status.current == PingPongSelector::BufferA {
+                        ping_pong_status.buffer_a_status = BufferConsumeStatus::Granted;
+                        ping_pong_status.current = PingPongSelector::BufferB;
+
+                        if ping_pong_status.buffer_b_status == BufferConsumeStatus::Granted {
+                            error!("DMA Ping-Pong buffer overrun on channel {}!", channel);
+                        } else {
+                            reg.channel(channel as usize)
+                                .xfercfg()
+                                .modify(|_, w| w.swtrig().set_bit());
+
+                            info!(
+                                "DMA retriggering continuous transfer on channel {}!, switching to buffer B",
+                                channel
+                            );
+                        }
+                    } else {
+                        ping_pong_status.buffer_b_status = BufferConsumeStatus::Granted;
+                        ping_pong_status.current = PingPongSelector::BufferA;
+
+                        if ping_pong_status.buffer_a_status == BufferConsumeStatus::Granted {
+                            error!("DMA Ping-Pong buffer overrun on channel {}!", channel);
+                        } else {
+                            reg.channel(channel as usize)
+                                .xfercfg()
+                                .modify(|_, w| w.swtrig().set_bit());
+
+                            info!(
+                                "DMA retriggering continuous transfer on channel {}!, switching to buffer A",
+                                channel
+                            );
+                        }
+                    }
+                }
 
                 // Ensure the waker actually exists for this channel before attempting to wake it
                 if let Some(waker) = wakers.get(channel as usize) {
