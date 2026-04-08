@@ -27,14 +27,15 @@ embassy-imxrt = { version = "0.1.0", path = "../../", features = [
     "unstable-pac",
 ] }
 
-embassy-sync = { version = "0.7.2", features = [
+embassy-sync = { version = "0.8.0", features = [
     "defmt",
 ] }
-embassy-executor = { version = "0.9.1", features = [
-    "arch-cortex-m",
+embassy-executor = { version = "0.10.0", features = [
+    "platform-cortex-m",
     "executor-thread",
     "executor-interrupt",
     "defmt",
+    "metadata-name",
 ] }
 embassy-futures = "0.1.2"
 embassy-time = { version = "0.5.0", features = [
