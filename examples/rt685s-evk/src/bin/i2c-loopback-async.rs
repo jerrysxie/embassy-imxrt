@@ -16,7 +16,7 @@ const ADDR: u8 = 0x20;
 const MASTER_BUFLEN: usize = 8;
 // slave buffer has to be 1 bigger than master buffer because master does not
 // handle end of read properly
-const SLAVE_BUFLEN: usize = MASTER_BUFLEN + 1;
+const SLAVE_BUFLEN: usize = MASTER_BUFLEN / 2;
 const SLAVE_ADDR: Option<Address> = Address::new(ADDR);
 
 bind_interrupts!(struct Irqs {
